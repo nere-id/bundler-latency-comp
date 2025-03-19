@@ -1,0 +1,4 @@
+Bundler,Avg Submission Latency (ms),Avg On-Chain Latency (ms),Avg Total Latency (ms)
+biconomy,1098.58,1827.16,2925.74
+alchemy,992.87,2670.09,3662.96
+pimlico,727.18,2733.77,3460.95
