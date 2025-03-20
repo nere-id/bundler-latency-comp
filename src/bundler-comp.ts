@@ -36,7 +36,7 @@ const BUNDLER_CLIENTS = {
   }),
 };
 
-const NUM_ITERATIONS = 100;
+const NUM_ITERATIONS = 2;
 const OUTPUT_DIR = 'output';
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'latency_results.csv');
 const AVG_OUTPUT_FILE = path.join(OUTPUT_DIR, 'average_latency_results.csv');
@@ -55,24 +55,26 @@ async function runBundlerComp(
     
     const start = Date.now();
     let userOpHash: `0x${string}`;
-    let submissionTime: number | null = null;
+    let submissionEnd: number | null = null;
     let onChainTime: number | null = null;
     let txHash: `0x${string}` | null = null;
 
     try {
-      const submitStart = Date.now();
+      // 1. Send userOp
+      const submissionStart = Date.now();
       userOpHash = await bundlerClient.sendUserOperation({
         account,
         calls: [{ 
           to: account.address, 
-          value: BigInt(Math.floor(Math.random() * 10000))  // Random, small amount of wei
+          value: BigInt(Math.floor(Math.random() * 10_000))
         }],
         maxPriorityFeePerGas: 1_000_000n
       });
-      submissionTime = Date.now();
-      const submissionLatency = submissionTime - submitStart;
+      submissionEnd = Date.now();
+      const submissionLatency = submissionEnd - submissionStart;
       console.log(`UserOp submitted: ${userOpHash} (Submission Latency: ${submissionLatency} ms)`);
 
+      // 2. Wait on inclusion
       const receipt = await bundlerClient.waitForUserOperationReceipt({ hash: userOpHash });
       txHash = receipt.receipt.transactionHash;
       const block = await pubClient.getBlock({ blockNumber: receipt.receipt.blockNumber });
@@ -100,11 +102,7 @@ async function runBundlerComp(
   return results;
 }
 
-async function main() {
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR);
-  }
-
+async function main() {  
   const allResults = [];
   const avgResults: any = {};
 

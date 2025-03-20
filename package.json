@@ -10,6 +10,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@aa-sdk/core": "^4.17.0",
+    "@biconomy/account": "^4.5.7",
     "dotenv": "^16.4.7",
     "permissionless": "^0.2.37",
     "ts-node": "^10.9.2",
