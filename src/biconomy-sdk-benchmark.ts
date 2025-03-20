@@ -54,7 +54,7 @@ async function runBiconomySdkBenchmark() {
     let submissionEnd: number | null = null;
     let onChainTime: number | null = null;
     let txHash: `0x${string}` | null = null;
-    let userOpHash: string;
+    let userOpHash: `0x${string}`;
     
     try {
       // 1. Send userOp
@@ -67,10 +67,15 @@ async function runBiconomySdkBenchmark() {
       const submissionLatency = submissionEnd - submissionStart;
       
       console.log(`UserOp submitted: ${userOpResponse.userOpHash} (Submission Latency: ${submissionLatency} ms)`);      
-      userOpHash = userOpResponse.userOpHash;
+      userOpHash = userOpResponse.userOpHash as `0x${string}`;
       
       // 2. Wait on inclusion
-      const receipt = await userOpResponse.wait(1);      
+      // const receipt = await userOpResponse.wait(1);      
+      // const biconomyPromise = userOpResponse.wait(1);
+      // const viemPromise = biconomyBundlerClient.waitForUserOperationReceipt({ hash: userOpHash });
+      // const [receipt, viemReceipt] = await Promise.all([biconomyPromise, viemPromise]);
+      const receipt = await await userOpResponse.wait(1);
+      
       txHash = receipt.receipt.transactionHash;
       const block = await pubClient.getBlock({ blockNumber: receipt.receipt.blockNumber });
       onChainTime = Number(block.timestamp) * 1000;

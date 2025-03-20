@@ -36,7 +36,7 @@ const BUNDLER_CLIENTS = {
   }),
 };
 
-const NUM_ITERATIONS = 2;
+const NUM_ITERATIONS = 100;
 const OUTPUT_DIR = 'output';
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'latency_results.csv');
 const AVG_OUTPUT_FILE = path.join(OUTPUT_DIR, 'average_latency_results.csv');
