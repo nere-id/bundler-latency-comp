@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { BundlerClient, createBundlerClient } from 'viem/account-abstraction';
 import { toBiconomySmartAccount, ToBiconomySmartAccountReturnType } from 'permissionless/accounts';
-import { createPublicClient, http } from 'viem';
+import { createPublicClient, formatEther, http, parseGwei, parseUnits } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { base } from 'viem/chains';
 import dotenv from 'dotenv';
@@ -38,8 +38,8 @@ const BUNDLER_CLIENTS = {
 
 const NUM_ITERATIONS = 100;
 const OUTPUT_DIR = 'output';
-const OUTPUT_FILE = path.join(OUTPUT_DIR, 'latency_results.csv');
-const AVG_OUTPUT_FILE = path.join(OUTPUT_DIR, 'average_latency_results.csv');
+const OUTPUT_FILE = path.join(OUTPUT_DIR, 'latency_results_2.csv');
+const AVG_OUTPUT_FILE = path.join(OUTPUT_DIR, 'average_latency_results_2.csv');
 
 async function runBundlerComp(
   account: ToBiconomySmartAccountReturnType,
@@ -52,29 +52,45 @@ async function runBundlerComp(
 
   for (let i = 0; i < NUM_ITERATIONS; i++) {
     console.log(`Submitting UserOp #${i + 1}`);
-    
-    const start = Date.now();
+        
     let userOpHash: `0x${string}`;
     let submissionEnd: number | null = null;
     let onChainTime: number | null = null;
     let txHash: `0x${string}` | null = null;
 
     try {
-      // 1. Send userOp
-      const submissionStart = Date.now();
-      userOpHash = await bundlerClient.sendUserOperation({
+      // 1. Prepare userOp
+      const userOperation = await bundlerClient.prepareUserOperation({
         account,
         calls: [{ 
           to: account.address, 
           value: BigInt(Math.floor(Math.random() * 10_000))
-        }],
-        maxPriorityFeePerGas: 1_000_000n
+        }]
       });
+      // userOperation.callGasLimit = 30_000_000n;
+      // userOperation.callGasLimit = 20_000_000n;
+      // userOperation.preVerificationGas = 30_000_000n;
+      userOperation.maxPriorityFeePerGas = parseGwei('0.002');
+      userOperation.signature = await account.signUserOperation(userOperation);
+      // console.log({ 
+      //   gas: { 
+      //     callGasLimit: userOperation.callGasLimit,
+      //     verificationGasLimit: userOperation.verificationGasLimit,
+      //     preVerificationGas: userOperation.preVerificationGas,
+      //     maxFeePerGas: userOperation.maxFeePerGas,
+      //     maxPriorityFeePerGas: userOperation.maxPriorityFeePerGas,
+      //   }          
+      // });
+  
+      // 2. Send userOp
+      const start = Date.now();
+      const submissionStart = Date.now();
+      userOpHash = await bundlerClient.sendUserOperation(userOperation);
       submissionEnd = Date.now();
       const submissionLatency = submissionEnd - submissionStart;
       console.log(`UserOp submitted: ${userOpHash} (Submission Latency: ${submissionLatency} ms)`);
 
-      // 2. Wait on inclusion
+      // 3. Wait on inclusion
       const receipt = await bundlerClient.waitForUserOperationReceipt({ hash: userOpHash });
       txHash = receipt.receipt.transactionHash;
       const block = await pubClient.getBlock({ blockNumber: receipt.receipt.blockNumber });
@@ -137,8 +153,7 @@ async function main() {
   fs.writeFileSync(OUTPUT_FILE, csvHeader + csvRows);
 
   const avgCsvHeader = "Bundler,Avg Submission Latency (ms),Avg On-Chain Latency (ms),Avg Total Latency (ms)\n";
-  // @ts-ignore
-  const avgCsvRows = Object.entries(avgResults).map(([bundler, data]) => `${bundler},${data.submissionLatency},${data.onChainLatency},${data.totalLatency}`).join("\n");
+  const avgCsvRows = Object.entries(avgResults).map(([bundler, data]: [any, any]) => `${bundler},${data.submissionLatency},${data.onChainLatency},${data.totalLatency}`).join("\n");
   fs.writeFileSync(AVG_OUTPUT_FILE, avgCsvHeader + avgCsvRows);
 
   console.log(`Results saved to ${OUTPUT_FILE}`);
